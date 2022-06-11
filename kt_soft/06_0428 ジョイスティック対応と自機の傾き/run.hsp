@@ -27,7 +27,7 @@ pk = 0 ; 自機の傾きの為の変数
 ;
 ; キーパッド入力による自機の移動
 ;
-jstick ky, 15	;キーのチェック
+jstick ky, 15	; キーのチェック
 if ky & 1 : px -= 8 : pk =  64 : if px < 0   : px = 0
 if ky & 4 : px += 8 : pk = 128 : if px > 416 : px = 416
 if ky & 2 : py -= 8 :            if py < 0   : py = 0
