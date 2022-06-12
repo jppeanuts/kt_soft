@@ -1,88 +1,88 @@
 #include "mod_joystick2.as"
 
 ;
-; �o�b�t�@��ʁi�E�B���h�E1�j��p�ӂ��A�摜��ǂݍ���
+; バッファ画面（ウィンドウ1）を用意し、画像を読み込む
 ;
 buffer 1
 picload "stg1.gif"
 
 ;
-; ���C����ʁi�E�B���h�E0�j��480x640�ŗp�ӂ���
+; メイン画面（ウィンドウ0）を 480x640 で用意する
 ;
 screen 0, 480, 640, 0, 0, 0
-px = 224 : py = 576 ; ���@�̏����ʒu
+px = 224 : py = 576 ; 自機の初期位置
 
 ;
-; ���@�e�̐ݒ�
+; 自機弾の設定
 ;
-tmx = 10	; ���@�e�̐�
-dim tx, tmx	; ���@�e��X���W�̔z��ϐ�
-dim ty, tmx	; ���@�e��Y���W�̔z��ϐ�
-dim tf, tmx	; ���@�e����ʂɂ��邩�������𒲂ׂ�z��ϐ�
+tmx = 10	; 自機弾の数
+dim tx, tmx	; 自機弾のX座標の配列変数
+dim ty, tmx	; 自機弾のY座標の配列変数
+dim tf, tmx	; 自機弾が画面にあるか無いかを調べる配列変数
 
 ; *****************************************************************************************************************
-;     ���C�����[�v
+;     メインループ
 ; *****************************************************************************************************************
 *mainLoop
 
-redraw 0              ; ���z��ʂ��w��@
-color  0, 0, 0        ; �F�ɍ����w��
-boxf   0, 0, 480, 640 ; ���z��ʂ����œh��Ԃ�
+redraw 0              ; 仮想画面を指定　
+color  0, 0, 0        ; 色に黒を指定
+boxf   0, 0, 480, 640 ; 仮想画面を黒で塗りつぶす
 
 ; -------------------------------------------------------------------------------------
-;   �L�[�p�b�h���͂ɂ�鎩�@�̈ړ�
+;   キーパッド入力による自機の移動
 ; -------------------------------------------------------------------------------------
-pk = 0           ; ���@�̌X���ׂ̈̕ϐ�
-jstick ky, 15    ; �����L�[�̃`�F�b�N
+pk = 0           ; 自機の傾きの為の変数
+jstick ky, 15    ; 方向キーのチェック
 if ky & 1 : px -= 8 : pk = 64  : if px < 0   : px = 0
 if ky & 4 : px += 8 : pk = 128 : if px > 416 : px = 416
 if ky & 2 : py -= 8 :            if py < 0   : py = 0
 if ky & 8 : py += 8 :            if py > 576 : py = 576
 
-pos px, py              ; ���@�̍��W�w��
-gcopy 1, pk, 0, 64, 64  ; �o�b�t�@��ʁi�E�B���h�E1�j��莩�@�摜�����z��ʁi�E���j�ɃR�s�[
+pos px, py              ; 自機の座標指定
+gcopy 1, pk, 0, 64, 64  ; バッファ画面（ウィンドウ1）より自機画像を仮想画面（ウラ）にコピー
 
 ; -------------------------------------------------------------------------------------
-;   ���@�e�̔��ˏ���
+;   自機弾の発射処理
 ; -------------------------------------------------------------------------------------
-shottime--          ; �A�˂ׂ̈̏���
-jstick ky, 2048     ; Z�L�[�̃`�F�b�N
+shottime--          ; 連射の為の処理
+jstick ky, 2048     ; Zキーのチェック
 
 ;
-; Z�L�[��������Ă��āA���� shottime �� 0 �ȉ��̎��Ast �� 1 ��������
+; Zキーが押されていて、かつ shottime が 0 以下の時、st に 1 を代入する
 ;
 if ky & 2048 : if shottime < 0 : st = 1
 
-repeat tmx                        ; �urepeat�`loop�v�Ԃ� tmx = 10 ��J��Ԃ�
+repeat tmx                        ; 「repeat～loop」間を tmx = 10 回繰り返す
     ;
-    ; ��ʂɒe���Ȃ� tf(cnt) = 0 �A���� Z�L�[�������Ă���ist = 1�j�̏ꍇ
+    ; 画面に弾がない tf(cnt) = 0 、かつ Zキーを押している（st = 1）の場合
     ;
     if tf(cnt) = 0 : if st = 1 {
-        tx(cnt) = px              ; tx(cnt)�i�e��x���W�j��px�i���@��x���W�j�̒l����
-        ty(cnt) = py-40           ; ty(cnt)�i�e��y���W�j��py�i���@��y���W�j���40�������l��������
-                                  ; �i�e�Ǝ��@���d�Ȃ�Ȃ��悤�ɂ���ׁj
-        tf(cnt) = 1               ; tf(cnt)��1��������B1����ʂɒe������
-        st = 0                    ; �A�˂ׂ̈̏���
-        shottime = 3              ; �A�˂ׂ̈̏���
+        tx(cnt) = px              ; tx(cnt)（弾のx座標）にpx（自機のx座標）の値を代入
+        ty(cnt) = py-40           ; ty(cnt)（弾のy座標）にpy（自機のy座標）より40引いた値を代入する
+                                  ; （弾と自機が重ならないようにする為）
+        tf(cnt) = 1               ; tf(cnt)に1を代入する。1＝画面に弾がある
+        st = 0                    ; 連射の為の処理
+        shottime = 3              ; 連射の為の処理
     }
     
     ;
-    ; �e��i�߂ĉ�ʂ���o����e������
+    ; 弾を進めて画面から出たら弾を消す
     ;
     ty(cnt) -= 10
     if ty(cnt) < -64 : tf(cnt) = 0 : ty(cnt) = -64 : st = 0
     
     ;
-    ; ��ʂɒe������ tf(cnt) = 1 �ꍇ
+    ; 画面に弾がある tf(cnt) = 1 場合
     ;
     if tf(cnt) = 1 {
-        pos tx(cnt), ty(cnt)    ; ���@�e�̍��W�w��
-        gmode 2                 ; �����������ׂ̖̈���
-        gcopy 1, 192, 0, 64, 64 ; �o�b�t�@��ʁi�E�B���h�E1�j��莩�@�e�摜���R�s�[
+        pos tx(cnt), ty(cnt)    ; 自機弾の座標指定
+        gmode 2                 ; 透明化処理の為の命令
+        gcopy 1, 192, 0, 64, 64 ; バッファ画面（ウィンドウ1）より自機弾画像をコピー
     }
 loop
 
-redraw 1        ; ���C����ʂ��X�V
-await 1	        ; ��������Ȃ��ƃp�\�R�����ł܂�@
+redraw 1        ; メイン画面を更新
+await 1	        ; これを入れないとパソコンが固まる　
 
 goto *mainLoop
