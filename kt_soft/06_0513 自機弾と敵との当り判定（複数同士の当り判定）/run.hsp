@@ -1,182 +1,182 @@
 ;
-; �����ݒ�
+; 初期設定
 ;
 #include "mod_joystick2.as"
 
 *start
 ;
-; �o�b�t�@��ʁi�E�B���h�E1�j��p�ӂ��A�摜��ǂݍ���
+; バッファ画面（ウィンドウ1）を用意し、画像を読み込む
 ;
 buffer  1
 picload "stg6.gif"
 
 ;
-; �o�b�t�@��ʁi�E�B���h�E2�j��p�ӂ��A�摜��ǂݍ���
+; バッファ画面（ウィンドウ2）を用意し、画像を読み込む
 ;
 buffer  2
 picload "s398.gif"
-ssp = 449  ; �X�N���[�����x
+ssp = 449  ; スクロール速度
 
 ;
-; ���C����ʁi�E�B���h�E0�j�� 320x448 �ŗp�ӂ���
+; メイン画面（ウィンドウ0）を 320x448 で用意する
 ;
-wxs = 320 : wys = 448		; ���C����ʂ̍��W�w��
+wxs = 320 : wys = 448		; メイン画面の座標指定
 screen 0, wxs, wys, 0, 0, 0
 
-gtime = 0           ; �Q�[���̌o�ߎ���
-px = 144 : py = 400 ; ���@�̏����ʒu
+gtime = 0           ; ゲームの経過時間
+px = 144 : py = 400 ; 自機の初期位置
 
 ;
-; ���@�e�̐ݒ�
+; 自機弾の設定
 ;
-tmx = 10    ; ���@�e�̐�	
-dim tx, tmx ; ���@�e��X���W�̔z��ϐ�
-dim ty, tmx ; ���@�e��Y���W�̔z��ϐ� 
-dim tf, tmx ; ���@�e����ʂɂ��邩�������𒲂ׂ�z��ϐ�
+tmx = 10    ; 自機弾の数	
+dim tx, tmx ; 自機弾のX座標の配列変数
+dim ty, tmx ; 自機弾のY座標の配列変数 
+dim tf, tmx ; 自機弾が画面にあるか無いかを調べる配列変数
 
 ;
-; �G�̐ݒ�
+; 敵の設定
 ;
-emx = 50    ; ��
-dim ex, emx ; X���W
-dim ey, emx ; Y���W
-dim dx, emx ; X�ړ���
-dim dy, emx ; Y�ړ���
-dim ef, emx ; �G����ʏ�ɂ���^���Ȃ�
-dim em, emx ; ���
-dim et, emx ; �G�̐�������
+emx = 50    ; 数
+dim ex, emx ; X座標
+dim ey, emx ; Y座標
+dim dx, emx ; X移動量
+dim dy, emx ; Y移動量
+dim ef, emx ; 敵が画面上にいる／いない
+dim em, emx ; 種類
+dim et, emx ; 敵の生成時間
 
 ;
-; �G�e�̐ݒ�
+; 敵弾の設定
 ;
-emt = 50      ; ��
-dim etx,  emt ; X���W
-dim ety,  emt ; Y���W
-dim etxv, emt ; X�ړ���
-dim etyv, emt ; Y�ړ���
-dim etf,  emt ; �G�e����ʏ�ɂ���^�Ȃ�
+emt = 50      ; 数
+dim etx,  emt ; X座標
+dim ety,  emt ; Y座標
+dim etxv, emt ; X移動量
+dim etyv, emt ; Y移動量
+dim etf,  emt ; 敵弾が画面上にある／ない
 
-sc   = 0      ; �X�R�A
-gend = 0      ; �Q�[���I�[�o�[�̔��f�i0�̓Q�[���I�[�o�[�ł͂Ȃ��j
+sc   = 0      ; スコア
+gend = 0      ; ゲームオーバーの判断（0はゲームオーバーではない）
 
 ;
-; �������\�̏����i���@�_���e�j
+; 平方根表の準備（自機狙い弾）
 ;
-dim calc, 500             ; �������ׂ̈̔z��ϐ�
-repeat 500                ; 500��J��Ԃ�
+dim calc, 500             ; 平方根の為の配列変数
+repeat 500                ; 500回繰り返す
   temp = cnt
-  calc(cnt) = temp * temp ; calc(cnt)��temp��2��̒l�����Ă���
+  calc(cnt) = temp * temp ; calc(cnt)にtempの2乗の値を入れておく
 loop
 
 
 ; *****************************************************************************************************************
-;    ���C�����[�v
+;    メインループ
 ; *****************************************************************************************************************
 *mainLoop
 
-redraw 0              ; ��ʂɔ��f���Ȃ�(���z��ʂ͏��������)
-color  0, 0, 0        ; �F�ɍ����w��
-boxf   0, 0, wxs, wys ; ���z��ʂ����œh��Ԃ�
+redraw 0              ; 画面に反映しない(仮想画面は書き換わる)
+color  0, 0, 0        ; 色に黒を指定
+boxf   0, 0, wxs, wys ; 仮想画面を黒で塗りつぶす
 
 ;
-; �X�N���[������
+; スクロール処理
 ;
-gmode 1					 ; �m�[�}���R�s�[���[�h
-scr = (scr + ssp) \ wys  ; �X�N���[�����x����i\�͊���Z�̗]��j
-                         ; scr �� 5����������B635 �� 0
+gmode 1                  ; ノーマルコピーモード
+scr = (scr + ssp) \ wys  ; スクロール速度決定（\は割り算の余り）
+                         ; scr は 5ずつ増加する。635 → 0
 ;
-; �����̔w�i�̃R�s�[���W�ƃR�s�[����摜�̑傫�������߂ăR�s�[
+; 下側の背景のコピー座標とコピーする画像の大きさを決めてコピー
 ;
 pos   0, scr
 gcopy 2, 0, 0, wxs, wys-scr
 
 ;
-; �㑤�̔w�i�̃R�s�[���W�ƃR�s�[����摜�̑傫�������߂ăR�s�[
+; 上側の背景のコピー座標とコピーする画像の大きさを決めてコピー
 ;
-if scr ! 0 {             ; �i!�͏������A�����łȂ��j
+if scr ! 0 {             ; （!は条件式、同じでない）
 	pos   0, 0
     gcopy 2, 0, wys-scr, wxs, scr
 }
 
 ; ----------------------------------------------------------------------------------------------
-;  *men �G�̏�����
+;  *men 敵の初期化
 ; ----------------------------------------------------------------------------------------------
 gosub *men
 
 ;
-; ���@�̈ړ�����
+; 自機の移動処理
 ;
-pk = 0                        ; ���@�̌X���ׂ̈̕ϐ�
-jstick ky, 15                 ; �L�[�̃`�F�b�N
+pk = 0                        ; 自機の傾きの為の変数
+jstick ky, 15                 ; キーのチェック
 if ky & 1 : px -= 2 : pk = 32 : if px < 0   : px = 0
 if ky & 4 : px += 2 : pk = 64 : if px > 288 : px = 288
 if ky & 2 : py -= 2 :           if py < 0   : py = 0
 if ky & 8 : py += 2 :           if py > 416 : py = 416
 
-gmode 2                       ; �����������ׂ̖̈���
-pos   px, py                  ; ���@�̍��W�w��
-gcopy 1, pk, 0, 32, 32        ; �o�b�t�@��ʁi�E�B���h�E1�j��莩�@�摜���R�s�[
+gmode 2                       ; 透明化処理の為の命令
+pos   px, py                  ; 自機の座標指定
+gcopy 1, pk, 0, 32, 32        ; バッファ画面（ウィンドウ1）より自機画像をコピー
 
 ;
-; ���@�e�̔��ˏ���
+; 自機弾の発射処理
 ;
-shottime--      ; �A�˂ׂ̈̏���
-jstick ky, 2048 ; Z�L�[�̃`�F�b�N
+shottime--      ; 連射の為の処理
+jstick ky, 2048 ; Zキーのチェック
 
 ;
-; Z�L�[��������Ă��āA���� shottime �� 0 �ȉ��̎��Ast �� 1 ��������
+; Zキーが押されていて、かつ shottime が 0 以下の時、st に 1 を代入する
 ;
 if ky & 2048 : if shottime < 0 : st = 1
 
-repeat tmx ; �urepeat�`loop�v�Ԃ� tmx��J��Ԃ�
+repeat tmx ; 「repeat～loop」間を tmx回繰り返す
     ;
-    ; ��ʂɒe���Ȃ� tf(cnt) = 0 �A���� Z�L�[�������Ă���ist = 1�j�̏ꍇ
+    ; 画面に弾がない tf(cnt) = 0 、かつ Zキーを押している（st = 1）の場合
     ;
     if tf(cnt) = 0 : if st = 1 {
-        tx(cnt) = px      ; tx(cnt)�i�e��X���W�j��px�i���@��X���W�j�̒l����
-        ty(cnt) = py - 20 ; ty(cnt)�i�e��Y���W�j��py�i���@��Y���W�j��� 40�������l��������
-                          ; �i�e�Ǝ��@���d�Ȃ�Ȃ��悤�ɂ���ׁj
-        tf(cnt) = 1       ; tf(cnt)��1��������B1����ʂɒe������
-        st = 0            ; �A�˂ׂ̈̏���
-        shottime = 3      ; �A�˂ׂ̈̏���
+        tx(cnt) = px      ; tx(cnt)（弾のX座標）にpx（自機のX座標）の値を代入
+        ty(cnt) = py - 20 ; ty(cnt)（弾のY座標）にpy（自機のY座標）より 40引いた値を代入する
+                          ; （弾と自機が重ならないようにする為）
+        tf(cnt) = 1       ; tf(cnt)に1を代入する。1＝画面に弾がある
+        st = 0            ; 連射の為の処理
+        shottime = 3      ; 連射の為の処理
     }
 
     ;
-    ; �e��i�߂ĉ�ʂ���o����e������
+    ; 弾を進めて画面から出たら弾を消す
     ;
     ty(cnt) -= 10
     if ty(cnt) < -32 : tf(cnt) = 0 : ty(cnt) = -32 : st = 0
 
     ;
-    ; ��ʂɒe������ tf(cnt) = 1 �ꍇ
+    ; 画面に弾がある tf(cnt) = 1 場合
     ;
     if tf(cnt) = 1 {
-        pos tx(cnt), ty(cnt)   ; ���@�e�̍��W�w��
-        gcopy 1, 96, 0, 32, 32 ; �o�b�t�@��ʁi�E�B���h�E1�j��莩�@�e�摜���R�s�[
+        pos tx(cnt), ty(cnt)   ; 自機弾の座標指定
+        gcopy 1, 96, 0, 32, 32 ; バッファ画面（ウィンドウ1）より自機弾画像をコピー
     }
 loop
 
 ;
-; �G�̈ړ�����
+; 敵の移動処理
 ;
-repeat emx                        ; �urepeat�`loop�v�Ԃ�emx��J��Ԃ�
-    et(cnt)++                     ; �G�̐������� �J�E���g�A�b�v
-    if ef(cnt) < 1  : continue    ; ef(cnt)��1�ȉ��i��ʏ�ɂ��Ȃ��j�Ȃ��repeat�ɖ߂�
-    if enm(cnt) = 1 : gosub *em01 ; enm(cnt)�i�G�̎�ށj��1�Ȃ�� *em01�ֈړ�
-    if enm(cnt) = 2 : gosub *em02 ; enm(cnt)�i�G�̎�ށj��2�Ȃ�� *em02�ֈړ�
+repeat emx                        ; 「repeat～loop」間をemx回繰り返す
+    et(cnt)++                     ; 敵の生成時間 カウントアップ
+    if ef(cnt) < 1  : continue    ; ef(cnt)が1以下（画面上にいない）ならばrepeatに戻る
+    if enm(cnt) = 1 : gosub *em01 ; enm(cnt)（敵の種類）が1ならば *em01へ移動
+    if enm(cnt) = 2 : gosub *em02 ; enm(cnt)（敵の種類）が2ならば *em02へ移動
 loop
 
 ;
-; �G�e�̔��ˏ���
+; 敵弾の発射処理
 ;
-repeat emt                           ; �urepeat�`loop�v�Ԃ�emt��J��Ԃ�
-if etf(cnt) = 1 {                    ; etf(cnt)��1�i�G�e����ʏ�ɂ���j
-    etx(cnt) = etx(cnt) + etxv(cnt)  ; �G�e��X�ړ���
-    ety(cnt) = ety(cnt) + etyv(cnt)  ; �G�e��Y�ړ���
-    pos   etx(cnt), ety(cnt)         ; �G�e��X-Y���W���w��
-    gcopy 1, 96, 40, 8, 8            ; �o�b�t�@��ʁi�E�B���h�E1�j���G�e�̉摜���R�s�[
+repeat emt                           ; 「repeat～loop」間をemt回繰り返す
+if etf(cnt) = 1 {                    ; etf(cnt)が1（敵弾が画面上にある）
+    etx(cnt) = etx(cnt) + etxv(cnt)  ; 敵弾のX移動量
+    ety(cnt) = ety(cnt) + etyv(cnt)  ; 敵弾のY移動量
+    pos   etx(cnt), ety(cnt)         ; 敵弾のX-Y座標を指定
+    gcopy 1, 96, 40, 8, 8            ; バッファ画面（ウィンドウ1）より敵弾の画像をコピー
 
-    if etx(cnt) > 320 : etf(cnt) = 0 ; �G�e�̍��W��320�ȏ�ɂȂ�����e�̑��݂�����
+    if etx(cnt) > 320 : etf(cnt) = 0 ; 敵弾の座標が320以上になったら弾の存在を消す
     if etx(cnt) < 0   : etf(cnt) = 0
     if ety(cnt) > 448 : etf(cnt) = 0
     if ety(cnt) < 0   : etf(cnt) = 0
@@ -184,61 +184,61 @@ if etf(cnt) = 1 {                    ; etf(cnt)��1�i�G�e����ʏ�ɂ���j
 loop
 
 ;
-; ���@�ƓG�̓����菈��
+; 自機と敵の当たり処理
 ;
-repeat emx                                           ; �urepeat�`loop�v�Ԃ�emx��J��Ԃ�
-    if ef(cnt) = 0 : continue                        ; ef(cnt)��0�i��ʏ�ɂ��Ȃ��j�Ȃ��repeat�ɖ߂�
-    if (abs(px-ex(cnt))<16) & (abs(py-ey(cnt))<16) { ; ���@�ƓG�Ƃ̍���16�h�b�g�ȉ��Ȃ��
-        gend = 1                                     ; ������I �� �Q�[���I�[�o�[����
+repeat emx                                           ; 「repeat～loop」間をemx回繰り返す
+    if ef(cnt) = 0 : continue                        ; ef(cnt)が0（画面上にいない）ならばrepeatに戻る
+    if (abs(px-ex(cnt))<16) & (abs(py-ey(cnt))<16) { ; 自機と敵との差が16ドット以下ならば
+        gend = 1                                     ; 当たり！ → ゲームオーバー処理
 }
 loop
 
 ;
-; ���@�e�ƓG�̓��蔻��
+; 自機弾と敵の当り判定
 ;
-repeat emx                    ; �urepeat�`loop�v�Ԃ�emx��J��Ԃ�
-    if ef(cnt) = 0 : continue ; ef(cnt)��0�i�G����ʂɂ��Ȃ��j�Ȃ��repeat�ɖ߂�
-    ent = cnt                 ; emx�ɑ΂���z��ϐ���ent�ɒu��������
+repeat emx                    ; 「repeat～loop」間をemx回繰り返す
+    if ef(cnt) = 0 : continue ; ef(cnt)が0（敵が画面にいない）ならばrepeatに戻る
+    ent = cnt                 ; emxに対する配列変数をentに置き換える
     
-    repeat tmx                    ; �urepeat�`loop�v�Ԃ�tmx��J��Ԃ�
-        if tf(cnt) < 1 : continue ; tf(cnt)��1�ȉ��i�e����ʂɂ��Ȃ��j�Ȃ��repeat�ɖ߂�
+    repeat tmx                    ; 「repeat～loop」間をtmx回繰り返す
+        if tf(cnt) < 1 : continue ; tf(cnt)が1以下（弾が画面にいない）ならばrepeatに戻る
         ;
-        ; ���@�e�ƓG��X-Y���W�������߁i���@�e�ƓG�̑S�āj�A�ǂ����16�ȉ��ł����
+        ; 自機弾と敵のX-Y座標差を求め（自機弾と敵の全て）、どちらも16以下であれば
         ;
         if (abs(tx(cnt)-ex(ent))<16) & (abs(ty(cnt)-ey(ent))<16)  {
-            tf(cnt) = 0 ; �e�����������́A���@�e�̑��݂�����
-            ef(ent) = 0 ; �e�����������́A�G�̑��݂�����
-            sc + 100    ; �X�R�A����
+            tf(cnt) = 0 ; 弾が当った時は、自機弾の存在を消す
+            ef(ent) = 0 ; 弾が当った時は、敵の存在を消す
+            sc + 100    ; スコア処理
             gosub *bomb
         }
     loop
 loop
 
-if bmc > 0 { ; bmc�i�����ׂ̈̕ϐ�)��0�ȏ�̎�
-    bmc--                               ; bmc��1������
-    pos   bmx, bmy                      ; bmx, bmy�ɍ��W���w��
-    gcopy 1, 128+48*(16-bmc), 0, 48, 48 ; �o�b�t�@��ʁi�E�B���h�E1�j��蔚���摜���R�s�[
+if bmc > 0 { ; bmc（爆発の為の変数)が0以上の時
+    bmc--                               ; bmcを1を引く
+    pos   bmx, bmy                      ; bmx, bmyに座標を指定
+    gcopy 1, 128+48*(16-bmc), 0, 48, 48 ; バッファ画面（ウィンドウ1）より爆発画像をコピー
 }
 
 ;
-; �X�R�A�\��
+; スコア表示
 ;
-pos   0, 0                    ; 0,0�ɍ��W���w��
-color 255, 255, 255           ; �F�ɔ���I��
-mes   "SCORE-" + sc + "-"     ; �X�R�A�\��
-if gend = 1 : gosub *gameover ; gend��1�i�Q�[���I�[�o�[�j�̎��A*gameover��
-redraw 1                      ; ���C����ʂ��X�V
-await  10                     ; ��������Ȃ��ƃp�\�R�����ł܂�
-gtime = gtime + 1             ; �^�C���e�[�u���ׂ̈̕ϐ�
+pos   0, 0                    ; 0,0に座標を指定
+color 255, 255, 255           ; 色に白を選択
+mes   "SCORE-" + sc + "-"     ; スコア表示
+if gend = 1 : gosub *gameover ; gendが1（ゲームオーバー）の時、*gameoverへ
+redraw 1                      ; メイン画面を更新
+await  10                     ; これを入れないとパソコンが固まる
+gtime = gtime + 1             ; タイムテーブルの為の変数
 
 goto *mainLoop
 
 
 ; *****************************************************************************************************************
-;    �T�u���[�`��
+;    サブルーチン
 ; *****************************************************************************************************************
 ; ----------------------------------------------------------------------------------------------
-;   *men �G�̏�����
+;   *men 敵の初期化
 ; ----------------------------------------------------------------------------------------------
 *men
 
@@ -272,182 +272,182 @@ if gtime = 252 : gtime = 0
 return
 
 ; ----------------------------------------------------------------------------------------------
-;   *eb01 �G1�̏�����
+;   *eb01 敵1の初期化
 ; ----------------------------------------------------------------------------------------------
 *eb01
 
-repeat emx                       ; �urepeat�`loop�v�Ԃ� emx�� �J��Ԃ�
-    if ef(cnt) > 0 : continue    ; ef(cnt)��0�ȏ�i�G����ʏ�ɂ���j�Ȃ��repeat�ɖ߂�
+repeat emx                       ; 「repeat～loop」間を emx回 繰り返す
+    if ef(cnt) > 0 : continue    ; ef(cnt)が0以上（敵が画面上にいる）ならばrepeatに戻る
 
-    enm(cnt) = 1                 ; �G�̎��
-    ef(cnt)  = 1                 ; �G����ʏ�ɂ���
-    ex(cnt)  = bx : ey(cnt) = by ; �����ʒu�iX-Y���W�֑���j
-    dx(cnt)  = 0  : dy(cnt) = 2  ; X,Y�̈ړ���
-    et(cnt)  = 0                 ; �G�̐������Ԃ����Z�b�g
-    break                        ; �urepeat�`loop�v�Ԃ̃��[�v����A�����I�ɔ����o��
+    enm(cnt) = 1                 ; 敵の種類
+    ef(cnt)  = 1                 ; 敵が画面上にいる
+    ex(cnt)  = bx : ey(cnt) = by ; 生成位置（X-Y座標へ代入）
+    dx(cnt)  = 0  : dy(cnt) = 2  ; X,Yの移動量
+    et(cnt)  = 0                 ; 敵の生成時間をリセット
+    break                        ; 「repeat～loop」間のループから、強制的に抜け出す
 loop
 return
 
 ; ----------------------------------------------------------------------------------------------
-;   *eb02 �G2�̏�����
+;   *eb02 敵2の初期化
 ; ----------------------------------------------------------------------------------------------
 *eb02
 
-repeat emx                       ; �urepeat�`loop�v�Ԃ� emx�� �J��Ԃ�
-    if ef(cnt) > 0 : continue    ; ef(cnt)��0�ȏ�(�G����ʏ�ɂ���j�Ȃ��repeat�ɖ߂�
+repeat emx                       ; 「repeat～loop」間を emx回 繰り返す
+    if ef(cnt) > 0 : continue    ; ef(cnt)が0以上(敵が画面上にいる）ならばrepeatに戻る
 
-    enm(cnt) = 2                 ; �G�̎��
-    ef(cnt)  = 1                 ; �G����ʏ�ɂ���
-    ex(cnt)  = bx : ey(cnt) = by ; �����ʒu�iX-Y���W�֑���j
-    dx(cnt)  = 2  : dy(cnt) = 1  ; X,Y�̈ړ���
-    et(cnt)  = 0                 ; �G�̐������Ԃ����Z�b�g
-    break                        ; �urepeat�`loop�v�Ԃ̃��[�v����A�����I�ɔ����o��
+    enm(cnt) = 2                 ; 敵の種類
+    ef(cnt)  = 1                 ; 敵が画面上にいる
+    ex(cnt)  = bx : ey(cnt) = by ; 生成位置（X-Y座標へ代入）
+    dx(cnt)  = 2  : dy(cnt) = 1  ; X,Yの移動量
+    et(cnt)  = 0                 ; 敵の生成時間をリセット
+    break                        ; 「repeat～loop」間のループから、強制的に抜け出す
 loop
 return
 
 ; ----------------------------------------------------------------------------------------------
-;   *em01 �G1�̈ړ�����
+;   *em01 敵1の移動処理
 ; ----------------------------------------------------------------------------------------------
 *em01
 
-ek = 0 ; �G�摜�X���ׂ̈̕ϐ�
+ek = 0 ; 敵画像傾きの為の変数
 ;
-; �G�̐������Ԃ�150�ȏ�ŁA
-; ex(cnt)�i�G��X���W�j��160�ȉ��i��ʒ�����荶���j�Ȃ�΁A
-; dx(cnt)�i�G��X�̈ړ��ʁj��-2�������A
-; ek�i�G�̉摜�X���j��32��������B
+; 敵の生成時間が150以上で、
+; ex(cnt)（敵のX座標）が160以下（画面中央より左側）ならば、
+; dx(cnt)（敵のXの移動量）に-2を代入し、
+; ek（敵の画像傾き）に32を代入する。
 ;
 if et(cnt) > 150 : if ex(cnt) < 160 : dx(cnt) = -2 : ek = 32
 if et(cnt) > 150 : if ex(cnt) > 160 : dx(cnt) = 2  : ek = 64
 
-; �G1�̈ړ�
+; 敵1の移動
 ex(cnt) = ex(cnt) + dx(cnt)
 ey(cnt) = ey(cnt) + dy(cnt)
 
 ;
-; ��ʂ����������G�̑��݂𖳂��ɂ���
+; 画面から消えたら敵の存在を無しにする
 ;
 if ey(cnt) > 448 : ef(cnt) = 0
 if ex(cnt) > 320 : ef(cnt) = 0
 if ex(cnt) < -32 : ef(cnt) = 0
 
 ;
-; �G1�̕\��
+; 敵1の表示
 ;
 pos   ex(cnt), ey(cnt)
 gmode 2
 gcopy 1, ek, 32, 32, 32
 
 ;
-; �G�e�̔�������
+; 敵弾の発生処理
 ;
-sx = px - ex(cnt) ; ���@�ƓG�Ƃ̍��iX�����j
-sy = py - ey(cnt) ; ���@�ƓG�Ƃ̍��iY�����j
-txv = sx          ; txv, tyv�ɂ��ꂼ����
+sx = px - ex(cnt) ; 自機と敵との差（X方向）
+sy = py - ey(cnt) ; 自機と敵との差（Y方向）
+txv = sx          ; txv, tyvにそれぞれ代入
 tyv = sy
 
-if sx < 0 : sx =0 - sx ; sx�̐�Βl
-if sy < 0 : sy =0 - sy ; sy�̐�Βl
+if sx < 0 : sx =0 - sx ; sxの絶対値
+if sy < 0 : sy =0 - sy ; syの絶対値
 su = sx
-if su < sy : su = sy   ; su �� sx �� sy �̂ǂ��炩�傫���ق�����
-                       ; su �͎��@�ƓG�Ƃ̑�̂̋����ƂȂ�
+if su < sy : su = sy   ; su に sx か sy のどちらか大きいほうを代入
+                       ; su は自機と敵との大体の距離となる
 
-if su > 180 {          ; su�� 180�ȏ�̎�
-    if ef(cnt) = 1 {   ; ef�� 1�i�G����ʂɂ���j�̎�
-        if etf(cnt) = 0 : if enm(cnt) = 1 { ; etf(cnt)��0�i��ʂɓG�e���Ȃ��j���A
-                                            ;   emn(cnt)��1�i�G�̎�ނ�1�j�̎�
-            etx(cnt) = ex(cnt) + 12 ; �G�e�̏������W
-            ety(cnt) = ey(cnt) + 28 ;   �������炵�Ă����Ȃ��ƓG�Əd�Ȃ��
-            etf(cnt) = 1            ; ��ʂɓG�e�����݂���
-            etxv(cnt) = 0           ; �G�e��X�����̈ړ���
-            etyv(cnt) = 3           ; �G�e��Y�����̈ړ���
+if su > 180 {          ; suが 180以上の時
+    if ef(cnt) = 1 {   ; efが 1（敵が画面にいる）の時
+        if etf(cnt) = 0 : if enm(cnt) = 1 { ; etf(cnt)が0（画面に敵弾がない）かつ、
+                                            ;   emn(cnt)が1（敵の種類が1）の時
+            etx(cnt) = ex(cnt) + 12 ; 敵弾の初期座標
+            ety(cnt) = ey(cnt) + 28 ;   少しずらしておかないと敵と重なる為
+            etf(cnt) = 1            ; 画面に敵弾が存在する
+            etxv(cnt) = 0           ; 敵弾のX方向の移動量
+            etyv(cnt) = 3           ; 敵弾のY方向の移動量
         }
     }
 }
 
 ;
-; �G�e�̓����蔻��
+; 敵弾の当たり判定
 ;
-repeat emt                           ; �urepeat�`loop�v�Ԃ� emt��J��Ԃ�
-    ddx = (etx(cnt)+4) - (px+16)     ; �G�e�Ǝ��@�̒��SX���W�̍�
-    ddy = (ety(cnt)+4) - (py+16)     ; �G�e�Ǝ��@�̒��SY���W�̍�
+repeat emt                           ; 「repeat～loop」間を emt回繰り返す
+    ddx = (etx(cnt)+4) - (px+16)     ; 敵弾と自機の中心X座標の差
+    ddy = (ety(cnt)+4) - (py+16)     ; 敵弾と自機の中心Y座標の差
     
-    if (abs(ddx)<5) & (abs(ddy)<5) { ; X������Y�����̐�Βl�̍���5�ȉ��Ȃ��
-        gend = 1                     ; ������I �� gend �� 1�i�Q�[���I�[�o�[�̏����j
+    if (abs(ddx)<5) & (abs(ddy)<5) { ; X方向とY方向の絶対値の差が5以下ならば
+        gend = 1                     ; 当たり！ → gend が 1（ゲームオーバーの処理）
     }
 loop
 return
 
 ; ----------------------------------------------------------------------------------------------
-;   *em02 �G2�̈ړ�����
+;   *em02 敵2の移動処理
 ; ----------------------------------------------------------------------------------------------
 *em02
 
-ex(cnt) = ex(cnt) + dx(cnt)          ; �G2��X�ړ���
-if (ex(cnt) < 1) | (ex(cnt) > 287) { ; ��ʂ̒[�܂ōs�����甽�]������
+ex(cnt) = ex(cnt) + dx(cnt)          ; 敵2のX移動量
+if (ex(cnt) < 1) | (ex(cnt) > 287) { ; 画面の端まで行ったら反転させる
     dx(cnt) = -dx(cnt)
 }
 
 if ey(cnt) = 300 : dy(cnt) = -3
 
-ey(cnt) = ey(cnt) + dy(cnt)    ; �G2��Y�ړ���
-if ey(cnt) > 448 : ef(cnt) = 0 ; ��ʂ����������G�̑��݂𖳂��ɂ���
+ey(cnt) = ey(cnt) + dy(cnt)    ; 敵2のY移動量
+if ey(cnt) > 448 : ef(cnt) = 0 ; 画面から消えたら敵の存在を無しにする
 if ey(cnt) < -65 : ef(cnt) = 0
 
 ;
-; �G2�̕\��
+; 敵2の表示
 ;
 pos   ex(cnt), ey(cnt)
 gmode 2
 gcopy 1, 0, 64, 32, 32
 
 ;
-; �G�e�̈ړ����x�ƕ���
+; 敵弾の移動速度と方向
 ;
 dxh = px - ex(cnt)
 mx = dxh
-if dxh < 0 : dxh = 0 - dxh      ; dxh�̐�Βl�̌v�Z
+if dxh < 0 : dxh = 0 - dxh      ; dxhの絶対値の計算
 
 dyh = py - ey(cnt)
 my = dyh
-if dyh < 0 : dyh = 0 - dyh      ; dyh�̐�Βl�̌v�Z
+if dyh < 0 : dyh = 0 - dyh      ; dyhの絶対値の計算
 
-dst = (dxh * dxh) + (dyh * dyh) ; �������̌v�Z
+dst = (dxh * dxh) + (dyh * dyh) ; 平方根の計算
 
 repeat 500
     if dst < calc(cnt) : dst = cnt : break
 loop
 
 ;
-; �G�e�̔�������
+; 敵弾の発生処理
 ;
-sx = px - ex(cnt) ; ���@�ƓG�Ƃ̍��iX�����j
-sy = py - ey(cnt) ; ���@�ƓG�Ƃ̍��iY�����j
-txv = sx          ; txv, tyv�ɂ��ꂼ����
+sx = px - ex(cnt) ; 自機と敵との差（X方向）
+sy = py - ey(cnt) ; 自機と敵との差（Y方向）
+txv = sx          ; txv, tyvにそれぞれ代入
 tyv = sy
 
-if sx < 0 : sx = 0 - sx ; sx�̐�Βl
-if sy < 0 : sy = 0 - sy ; sy�̐�Βl
+if sx < 0 : sx = 0 - sx ; sxの絶対値
+if sy < 0 : sy = 0 - sy ; syの絶対値
 su = sx
-if su < sy : su = sy    ; su �� sx �� sy �̂ǂ��炩�傫���ق�����
-                        ; su �͎��@�ƓG�Ƃ̑�̂̋����ƂȂ�
+if su < sy : su = sy    ; su に sx か sy のどちらか大きいほうを代入
+                        ; su は自機と敵との大体の距離となる
 
-if su > 180 {           ; su��180�ȏ�̎�
-    if ef(cnt) = 1 {    ; ef(cnt)�� 1�i�G����ʂɂ���j�̎�
-        if etf(cnt) = 0 : if enm(cnt) = 2 { ; etf(cnt)��0�i��ʂɓG�e���Ȃ��j���A
-                                            ;   enm(cnt)��2�i�G�̎�ނ�2�j�̎�
-            etf(cnt) = 1                    ; ��ʂɓG�e�����݂���
-            etx(cnt) = ex(cnt) + 12         ; �G�e�̏������W
-            ety(cnt) = ey(cnt) + 28         ;   �������炵�Ă����Ȃ��ƓG�Əd�Ȃ��
-            ds = 4                          ; �G�e�̑��x
-            etxv(cnt) = mx * ds / dst       ; �G�e��X�����̈ړ���
-            etyv(cnt) = my * ds / dst       ; �G�e��Y�����̈ړ���
+if su > 180 {           ; suが180以上の時
+    if ef(cnt) = 1 {    ; ef(cnt)が 1（敵が画面にいる）の時
+        if etf(cnt) = 0 : if enm(cnt) = 2 { ; etf(cnt)が0（画面に敵弾がない）かつ、
+                                            ;   enm(cnt)が2（敵の種類が2）の時
+            etf(cnt) = 1                    ; 画面に敵弾が存在する
+            etx(cnt) = ex(cnt) + 12         ; 敵弾の初期座標
+            ety(cnt) = ey(cnt) + 28         ;   少しずらしておかないと敵と重なる為
+            ds = 4                          ; 敵弾の速度
+            etxv(cnt) = mx * ds / dst       ; 敵弾のX方向の移動量
+            etyv(cnt) = my * ds / dst       ; 敵弾のY方向の移動量
         }
     }
 }
 
 ;
-; �G�e�̓����蔻��
+; 敵弾の当たり判定
 ;
 repeat emt
     ddx = (etx(cnt)+4) - (px+16)
@@ -463,13 +463,13 @@ loop
 return
 
 ; ----------------------------------------------------------------------------------------------
-;   �����A�j���[�V����
+;   爆発アニメーション
 ; ----------------------------------------------------------------------------------------------
 *bomb
 
-bmx = ex(ent) - 8 ; ������X���W
-bmy = ey(ent) - 8 ; ������Y���W
-bmc = 17          ; �����A�j���ׂ̈̕ϐ�
+bmx = ex(ent) - 8 ; 爆発のX座標
+bmy = ey(ent) - 8 ; 爆発のY座標
+bmc = 17          ; 爆発アニメの為の変数
 return
 
 ; ----------------------------------------------------------------------------------------------
@@ -477,21 +477,21 @@ return
 ; ----------------------------------------------------------------------------------------------
 *gameover
 
-color  255, 255, 0 ; �F�ɉ��F���w��
-pos    125, 228    ; ���W�w��
-mes    "GAME OVER" ; GAME OVER����ʂɕ\��
+color  255, 255, 0 ; 色に黄色を指定
+pos    125, 228    ; 座標指定
+mes    "GAME OVER" ; GAME OVERを画面に表示
 pos    65, 248
 mes    "Press X Key to Continue"
-redraw 1           ; ��ʂ��X�V����
+redraw 1           ; 画面を更新する
 gosub  *pse
 goto   *start
 
 ; ----------------------------------------------------------------------------------------------
-;   �|�[�Y
+;   ポーズ
 ; ----------------------------------------------------------------------------------------------
 *pse
 
 wait 1
 jstick ky
-if ky = 4096 : return ; X�L�[�������ꂽ��߂�
+if ky = 4096 : return ; Xキーが押されたら戻る
 goto *pse
